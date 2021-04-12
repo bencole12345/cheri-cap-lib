@@ -43,6 +43,7 @@ export CapPipe;
 export CapFat;
 export MW;
 export OTypeW;
+export StackFrameSizeW;
 export FlagsW;
 export Perms;
 export ResW;
@@ -80,6 +81,7 @@ typedef 0  UPermW;
 typedef 8  MW;
 typedef 6  ExpW;
 typedef 4  OTypeW;
+typedef 0  StackFrameSizeW;
 typedef `FLAGSW FlagsW;
 typedef 32 CapAddrW;
 typedef 64 CapW;
@@ -87,7 +89,8 @@ typedef 64 CapW;
 typedef 4   UPermW;
 typedef 14  MW;
 typedef 6   ExpW;
-typedef 18  OTypeW;
+typedef 15  OTypeW;
+typedef 3   StackFrameSizeW;
 typedef `FLAGSW FlagsW;
 typedef 64  CapAddrW;
 typedef 128 CapW;
@@ -134,17 +137,19 @@ typedef SizeOf#(Perms) PermsW;
 // The reserved bits
 typedef TSub#(CapW, TAdd#( CapAddrW
                          , TAdd#( OTypeW
-                                , TAdd#( CBoundsW
-                                       , TAdd#(PermsW, FlagsW))))) ResW;
+                                , TAdd#( StackFrameSizeW
+                                  , TAdd#( CBoundsW
+                                        , TAdd#(PermsW, FlagsW)))))) ResW;
 // The full capability structure, including the "tag" bit.
 typedef struct {
-  Bool         isCapability;
-  Perms        perms;
-  Bit#(ResW)   reserved;
-  Bit#(FlagsW) flags;
-  Bit#(OTypeW) otype;
-  CBounds      bounds;
-  CapAddr      address;
+  Bool                  isCapability;
+  Perms                 perms;
+  Bit#(ResW)            reserved;
+  Bit#(FlagsW)          flags;
+  Bit#(OTypeW)          otype;
+  Bit#(StackFrameSizeW) stackFrameSize;
+  CBounds               bounds;
+  CapAddr               address;
 } CapabilityInMemory deriving(Bits, Eq, FShow); // CapW + 1 (tag bit)
 // The full capability structure as Bits, including the "tag" bit.
 typedef Bit#(TAdd#(CapW,1)) Capability;
@@ -171,15 +176,16 @@ Bit#(OTypeW) otype_res1     = -4;
 
 // unpacked capability format
 typedef struct {
-  Bool           isCapability;
-  Bit#(CapAddrW) address;
-  Bit#(MW)       addrBits;
-  Perms          perms;
-  Bit#(FlagsW)   flags;
-  Bit#(ResW)     reserved;
-  Bit#(OTypeW)   otype;
-  Format         format;
-  Bounds         bounds;
+  Bool                  isCapability;
+  Bit#(CapAddrW)        address;
+  Bit#(MW)              addrBits;
+  Perms                 perms;
+  Bit#(FlagsW)          flags;
+  Bit#(ResW)            reserved;
+  Bit#(OTypeW)          otype;
+  Bit#(StackFrameSizeW) stackFrameSize;
+  Format                format;
+  Bounds                bounds;
 } CapFat deriving(Bits);
 
 // "Architectural FShow"
@@ -219,15 +225,16 @@ function CapFat unpackCap(Capability thin);
   CapabilityInMemory memCap = unpack(thin);
   // extract the fields from the memory capability
   CapFat fat = defaultValue;
-  fat.isCapability = memCap.isCapability;
-  fat.perms        = memCap.perms;
-  fat.flags        = memCap.flags;
-  fat.reserved     = memCap.reserved;
-  fat.otype        = memCap.otype;
-  match {.f, .b}   = decBounds(memCap.bounds);
-  fat.format       = f;
-  fat.bounds       = b;
-  fat.address      = memCap.address;
+  fat.isCapability   = memCap.isCapability;
+  fat.perms          = memCap.perms;
+  fat.flags          = memCap.flags;
+  fat.reserved       = memCap.reserved;
+  fat.otype          = memCap.otype;
+  fat.stackFrameSize = memCap.stackFrameSize;
+  match {.f, .b}     = decBounds(memCap.bounds);
+  fat.format         = f;
+  fat.bounds         = b;
+  fat.address        = memCap.address;
   // The next few lines are to optimise the critical path of generating addrBits.
   // The value of Exp can now be 0 or come from token, so assume they come from the token,
   // then select the lower bits at the end if they didn't after all.
@@ -242,13 +249,14 @@ endfunction
 // pack the fat capability into the memory representation
 function Capability packCap(CapFat fat);
   CapabilityInMemory thin = CapabilityInMemory{
-      isCapability: fat.isCapability
-    , perms:        fat.perms
-    , flags:        fat.flags
-    , reserved:     fat.reserved
-    , otype:        fat.otype
-    , bounds:       encBounds(fat.format,fat.bounds)
-    , address:      fat.address };
+      isCapability:   fat.isCapability
+    , perms:          fat.perms
+    , flags:          fat.flags
+    , reserved:       fat.reserved
+    , otype:          fat.otype
+    , stackFrameSize: fat.stackFrameSize
+    , bounds:         encBounds(fat.format,fat.bounds)
+    , address:        fat.address };
   return pack(thin);
 endfunction
 
@@ -682,27 +690,29 @@ instance DefaultValue #(Bounds);
 endinstance
 instance DefaultValue #(CapFat);
   defaultValue = CapFat {
-      isCapability: True
-    , perms       : unpack(~0)
-    , flags       : 0
-    , reserved    : 0
-    , otype       : otype_unsealed
-    , format      : EmbeddedExp
-    , bounds      : defaultValue
-    , address     : 0
-    , addrBits    : 0 };
+      isCapability  : True
+    , perms         : unpack(~0)
+    , flags         : 0
+    , reserved      : 0
+    , otype         : otype_unsealed
+    , stackFrameSize: 0
+    , format        : EmbeddedExp
+    , bounds        : defaultValue
+    , address       : 0
+    , addrBits      : 0 };
 endinstance
 
 CapFat null_cap = CapFat {
-    isCapability: False
-  , perms       : unpack(0)
-  , flags       : 0
-  , reserved    : 0
-  , otype       : otype_unsealed
-  , format      : EmbeddedExp
-  , bounds      : defaultValue
-  , address     : 0
-  , addrBits    : 0 };
+    isCapability  : False
+  , perms         : unpack(0)
+  , flags         : 0
+  , reserved      : 0
+  , otype         : otype_unsealed
+  , stackFrameSize: 0
+  , format        : EmbeddedExp
+  , bounds        : defaultValue
+  , address       : 0
+  , addrBits      : 0 };
 
 ///////////////////////////////////////////////
 // CHERI CONCENTRATE, example 128-bit format //
@@ -836,6 +846,18 @@ function MetaInfo getMetaInfo (CapFat cap);
 endfunction
 
 // ===============================================================================
+// Helpers for stack temporal safety
+
+function Bit#(64) getLifetimeMask (CapFat cap);
+  Bit#(3) stackFrameSizeBits = cap.stackFrameSize;
+  if (stackFrameSizeBits == 3'b0) begin
+    return 0;
+  end else begin
+    return 64'hffffffffffffffff << (stackFrameSizeBits + 5);
+  end
+endfunction
+
+// ===============================================================================
 // Typeclass instance for interface
 
 typedef Bit#(TAdd#(1, CapW)) CapMem;
@@ -922,6 +944,10 @@ instance CHERICap #(CapMem, OTypeW, FlagsW, CapAddrW, CapW, TSub#(MW, 3));
   function maskAddr = error("maskAddr not implemented for CapMem");
   function getBaseAlignment = error("getBaseAlignment not implemented for CapMem");
   function isDerivable = error("isDerivable not implemented for CapMem");
+  function getStackFrameSize = error("getStackFrameSize not implemented for CapMem");
+  function setStackFrameSize = error("setStackFrameSize not implemented for CapMem");
+  function isStackCapability = error("isStackCapability not implemented for CapMem");
+  function lifetimesAreValid = error("lifetimesAreValid not implemented for CapMem");
 endinstance
 
 instance FShow #(CapPipe);
@@ -1064,6 +1090,35 @@ instance CHERICap #(CapReg, OTypeW, FlagsW, CapAddrW, CapW, TSub#(MW, 3));
                                      (truncateLSB(cap.bounds.baseBits) != 2'b0))) &&
     !(cap.bounds.exp == resetExp-1 && (truncateLSB(cap.bounds.baseBits) != 1'b0)) &&
     (cap.reserved == 0);
+  
+  function isStackCapability (cap);
+    Bit#(3) stackFrameSizeBits = getStackFrameSize(cap);
+    return (stackFrameSizeBits != 3'b0);
+  endfunction
+
+  function getStackFrameSize (cap);
+    return cap.stackFrameSize;
+  endfunction
+
+  function setStackFrameSize (cap, value);
+    CapReg newCap = cap;
+    newCap.stackFrameSize = value;
+    return newCap;
+  endfunction
+  
+  function lifetimesAreValid (cap_destination, cap_source, offset);
+    if (!isStackCapability(cap_source)) begin
+      return True;
+    end else if (!isStackCapability(cap_destination)) begin
+      return False;
+    end else begin
+      Bit#(64) source_mask = getLifetimeMask(cap_source);
+      Bit#(64) destination_mask = getLifetimeMask(cap_destination);
+      Bit#(64) source_lifetime = (cap_source.address + signExtend(offset)) & source_mask;
+      Bit#(64) destination_lifetime = cap_destination.address & source_mask;
+      return (destination_lifetime >= source_lifetime);
+    end
+  endfunction
 
 endinstance
 
@@ -1173,6 +1228,20 @@ instance CHERICap #(CapPipe, OTypeW, FlagsW, CapAddrW, CapW, TSub#(MW, 3));
     capInBounds(cap.capFat, cap.tempFields, inclusive);
 
   function isDerivable (cap) = isDerivable(cap.capFat);
+
+  //Pass through stack temporal safety functions
+
+  function isStackCapability (cap) = isStackCapability(cap.capFat);
+
+  function getStackFrameSize (cap) = getStackFrameSize(cap.capFat);
+
+  function setStackFrameSize (cap, value);
+    let res = setStackFrameSize(cap.capFat, value);
+    return CapPipe { capFat: res, tempFields: getTempFields(res) };
+  endfunction
+
+  function lifetimesAreValid (cap_destination, cap_source, offset) =
+    lifetimesAreValid(cap_destination.capFat, cap_source.capFat, offset);
 
 endinstance
 

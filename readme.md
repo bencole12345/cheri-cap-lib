@@ -38,6 +38,10 @@ function t nullCap;
 function Bool validAsType (t dummy, Bit#(n) checkType);
 function t fromMem (Tuple2#(Bool, Bit#(mem_sz)) mem_cap);
 function Tuple2#(Bool, Bit#(mem_sz)) toMem (t cap);
+function Bit#(3) getStackFrameSize (t cap);
+function t setStackFrameSize (t cap, Bit#(3) value);
+function Bool isStackCapability (t cap);
+function Bool lifetimesAreValid (t cap_destination, t cap_source, Bit#(12) offset);
 ```
 
 The main currently used CHERI capability implementation using the "CHERI concentrate" format can be found in [CHERICC_Fat.bsv](CHERICC_Fat.bsv).

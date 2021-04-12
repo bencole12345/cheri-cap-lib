@@ -37,6 +37,8 @@ import CHERICC_Fat :: *;
 `define W(name) wrap64_``name
 `endif
 
+// TODO: Decide whether I need to add anything here
+
 (* noinline *)
 function Bool `W(isValidCap) (`CAPTYPE cap) = isValidCap(cap);
 (* noinline *)

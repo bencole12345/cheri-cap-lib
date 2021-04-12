@@ -202,6 +202,19 @@ typeclass CHERICap#(type t, numeric type ot, numeric type flg, numeric type n, n
   // Assert that the encoding is valid
   function Bool isDerivable (t cap);
 
+  // Get the stack frame bits of this capability
+  function Bit#(3) getStackFrameSize (t cap);
+
+  // Set the stack frame bits of this capabiltiy
+  function t setStackFrameSize (t cap, Bit#(3) value);
+
+  // Determine whether this is a stack capability
+  function Bool isStackCapability (t cap);
+
+  // Check that the implied stack lifetimes of the operands to a store
+  // instruction are valid.
+  function Bool lifetimesAreValid (t cap_destination, t cap_source, Bit#(12) offset);
+
 endtypeclass
 
 function Fmt showCHERICap(t cap) provisos (CHERICap#(t, ot, flg, n, mem_sz, maskable_bits));
@@ -210,7 +223,8 @@ function Fmt showCHERICap(t cap) provisos (CHERICap#(t, ot, flg, n, mem_sz, mask
          $format(" Kind: ", fshow(getKind(cap))) +
          $format(" Addr: 0x%0x", getAddr(cap)) +
          $format(" Base: 0x%0x", getBase(cap)) +
-         $format(" Length: 0x%0x", getLength(cap));
+         $format(" Length: 0x%0x", getLength(cap)) +
+         $format(" Stack Frame Size: 0x%0x", getStackFrameSize(cap));
 endfunction
 
 typeclass Cast#(type src, type dest);
