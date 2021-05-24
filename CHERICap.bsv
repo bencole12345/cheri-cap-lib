@@ -215,6 +215,9 @@ typeclass CHERICap#(type t, numeric type ot, numeric type flg, numeric type n, n
   // instruction are valid.
   function Bool lifetimesAreValid (t cap_destination, t cap_source, Bit#(12) offset);
 
+  // Determine the first address of the stack frame pointed to by this cap.
+  function t getStackFrameBase (t cap);
+
 endtypeclass
 
 function Fmt showCHERICap(t cap) provisos (CHERICap#(t, ot, flg, n, mem_sz, maskable_bits));

@@ -42,6 +42,7 @@ function Bit#(3) getStackFrameSize (t cap);
 function t setStackFrameSize (t cap, Bit#(3) value);
 function Bool isStackCapability (t cap);
 function Bool lifetimesAreValid (t cap_destination, t cap_source, Bit#(12) offset);
+function t getStackFrameBase (t cap);
 ```
 
 The main currently used CHERI capability implementation using the "CHERI concentrate" format can be found in [CHERICC_Fat.bsv](CHERICC_Fat.bsv).

@@ -948,6 +948,7 @@ instance CHERICap #(CapMem, OTypeW, FlagsW, CapAddrW, CapW, TSub#(MW, 3));
   function setStackFrameSize = error("setStackFrameSize not implemented for CapMem");
   function isStackCapability = error("isStackCapability not implemented for CapMem");
   function lifetimesAreValid = error("lifetimesAreValid not implemented for CapMem");
+  function getStackFrameBase = error("getStackFrameBase not implemented for CapMem");
 endinstance
 
 instance FShow #(CapPipe);
@@ -1120,6 +1121,21 @@ instance CHERICap #(CapReg, OTypeW, FlagsW, CapAddrW, CapW, TSub#(MW, 3));
     end
   endfunction
 
+  function getStackFrameBase (cap);
+    CapReg newCap = cap;
+    Bit#(3) stackFrameSizeBits = getStackFrameSize(cap);
+    if (stackFrameSizeBits == 3'b000) begin
+      newCap.address = 64'b0;
+    end else begin
+      Bit#(64) address = getAddr(cap);
+      Bit#(64) mask = 64'hffffffffffffffc0 << stackFrameSizeBits;
+      Bit#(64) masked = address & mask;
+      Bit#(64) offset = 64'h0000000000000040 << stackFrameSizeBits;
+      newCap.address = masked + offset;
+    end
+    return newCap;
+  endfunction
+
 endinstance
 
 instance CHERICap #(CapPipe, OTypeW, FlagsW, CapAddrW, CapW, TSub#(MW, 3));
@@ -1242,6 +1258,11 @@ instance CHERICap #(CapPipe, OTypeW, FlagsW, CapAddrW, CapW, TSub#(MW, 3));
 
   function lifetimesAreValid (cap_destination, cap_source, offset) =
     lifetimesAreValid(cap_destination.capFat, cap_source.capFat, offset);
+
+  function getStackFrameBase (cap);
+    let res = getStackFrameBase(cap.capFat);
+    return CapPipe { capFat: res, tempFields: getTempFields(res) };
+  endfunction
 
 endinstance
 
