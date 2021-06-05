@@ -1125,12 +1125,12 @@ instance CHERICap #(CapReg, OTypeW, FlagsW, CapAddrW, CapW, TSub#(MW, 3));
     CapReg newCap = cap;
     Bit#(3) stackFrameSizeBits = getStackFrameSize(cap);
     if (stackFrameSizeBits == 3'b000) begin
-      newCap.address = 64'b0;
+      newCap.address = 64'hffffffffffffffff;
     end else begin
       Bit#(64) address = getAddr(cap);
-      Bit#(64) mask = 64'hffffffffffffffc0 << stackFrameSizeBits;
+      Bit#(64) mask = 64'hffffffffffffffff << (stackFrameSizeBits + 5);
       Bit#(64) masked = address & mask;
-      Bit#(64) offset = 64'h0000000000000040 << stackFrameSizeBits;
+      Bit#(64) offset = 64'h0000000000000001 << (stackFrameSizeBits + 4);
       newCap.address = masked + offset;
     end
     return newCap;
