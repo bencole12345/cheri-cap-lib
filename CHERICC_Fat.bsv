@@ -1108,17 +1108,28 @@ instance CHERICap #(CapReg, OTypeW, FlagsW, CapAddrW, CapW, TSub#(MW, 3));
   endfunction
   
   function lifetimesAreValid (cap_destination, cap_source, offset);
-    if (!isStackCapability(cap_source)) begin
-      return True;
-    end else if (!isStackCapability(cap_destination)) begin
-      return False;
-    end else begin
-      Bit#(64) source_mask = getLifetimeMask(cap_source);
-      Bit#(64) destination_mask = getLifetimeMask(cap_destination);
-      Bit#(64) source_lifetime = (cap_source.address + signExtend(offset)) & source_mask;
-      Bit#(64) destination_lifetime = cap_destination.address & source_mask;
-      return (destination_lifetime >= source_lifetime);
-    end
+    // if (!isStackCapability(cap_source)) begin
+    //   return True;
+    // end else if (!isStackCapability(cap_destination)) begin
+    //   return False;
+    // end else begin
+    //   Bit#(64) source_mask = getLifetimeMask(cap_source);
+    //   Bit#(64) destination_mask = getLifetimeMask(cap_destination);
+    //   Bit#(64) source_lifetime = (cap_source.address + signExtend(offset)) & source_mask;
+    //   Bit#(64) destination_lifetime = cap_destination.address & source_mask;
+    //   return (destination_lifetime >= source_lifetime);
+    // end
+    // Bit#(64) source_lifetime = getStackFrameBase(cap_source);
+    // Bit#(64) destination_lifetime = getStackFrameBase(cap_destination);
+
+    CapReg source_lifetime = getStackFrameBase(cap_source);
+    CapReg destination_lifetime = getStackFrameBase(cap_destination);
+
+    // if (destination_lifetime > source_lifetime) begin
+
+    // end
+
+    return getAddr(source_lifetime) <= getAddr(destination_lifetime);
   endfunction
 
   function getStackFrameBase (cap);
